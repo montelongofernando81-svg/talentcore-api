@@ -3,3 +3,6 @@ __pycache__
 talentcore.db
 .pytest_cache/
 .env
+.venv/
+venv/
+.coverage

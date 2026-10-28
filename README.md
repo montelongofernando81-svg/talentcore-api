@@ -1,0 +1,47 @@
+# TalentCore API y agentes
+
+Este repositorio contiene la API de vacaciones y los agentes que generan, prueban,
+revisan y preparan el proyecto. El directorio de trabajo predeterminado es la raíz
+del repositorio.
+
+## Requisitos
+
+- Python 3.11 o posterior
+- Una clave de API de Groq para ejecutar los agentes (la API REST no requiere esa clave)
+
+## Instalación en Windows
+
+Desde la raíz del repositorio, ejecuta en PowerShell:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+Edita `.env` y configura `GROQ_API_KEY` antes de ejecutar agentes. No publiques
+ese archivo; `.env` está excluido de Git.
+
+## Ejecutar la API
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+La comprobación de salud está disponible en `http://127.0.0.1:8000/health`.
+La base de datos SQLite `talentcore.db` se crea localmente y no se versiona.
+
+## Ejecutar los agentes
+
+Desde la raíz y con `.env` configurado, ejecuta los scripts en este orden:
+
+1. `python 01_agente_product_owner.py`
+2. `python 02_agente_arquitecto.py`
+3. `python 03_agente_developer.py`
+4. `python 04_agente_qa.py`
+5. `python 05_agente_reviewer.py`
+6. `python 06_agente_devops.py`
+
+`python 00_test_conexion.py` comprueba la conexión con Groq. El directorio de
+trabajo puede cambiarse mediante `WORKSPACE_DIR` en `.env`.

@@ -4,3 +4,5 @@ sqlalchemy
 pydantic
 pytest
 httpx
+groq
+python-dotenv
