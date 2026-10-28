@@ -32,6 +32,14 @@ uvicorn app.main:app --reload
 La comprobación de salud está disponible en `http://127.0.0.1:8000/health`.
 La base de datos SQLite `talentcore.db` se crea localmente y no se versiona.
 
+En Swagger (`/docs`), puedes modificar datos de un empleado con
+`PATCH /api/v1/empleados/{empleado_id}`. Configura `ADMIN_API_KEY` como variable
+secreta del servicio en Render y envía su valor en el header `X-Admin-Key`.
+Si no está configurada, la API rechaza las modificaciones. Envía solo los campos
+que quieres cambiar: `nombre`, `email`,
+`anios_antiguedad` o `manager_id`. Para quitar el manager, envía
+`"manager_id": null`.
+
 ## Publicar en Render
 
 El archivo `render.yaml` configura TalentCore como un servicio web público.

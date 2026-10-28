@@ -8,7 +8,8 @@ from app.models import Base, get_db
 
 
 @pytest.fixture(autouse=True)
-def clean_database(tmp_path):
+def clean_database(tmp_path, monkeypatch):
+    monkeypatch.setenv("ADMIN_API_KEY", "test-admin-key")
     test_engine = create_engine(
         f"sqlite:///{tmp_path / 'test.db'}",
         connect_args={"check_same_thread": False},
@@ -139,3 +140,61 @@ def test_ac03_manager_no_autorizado(client):
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Unauthorized: Not the direct manager"
+
+
+def test_admin_actualiza_datos_de_empleado(client):
+    assert crear_empleado(client, "Admin", "ADMIN_RRHH").status_code == 201
+    assert crear_empleado(client, "Manager", "MANAGER", user_id=1).status_code == 201
+    assert crear_empleado(
+        client,
+        "Empleado",
+        "EMPLEADO",
+        manager_id=2,
+        user_id=1,
+    ).status_code == 201
+
+    response = client.patch(
+        "/api/v1/empleados/3",
+        json={
+            "nombre": "Nombre actualizado",
+            "email": "actualizado@example.com",
+            "anios_antiguedad": 5,
+            "manager_id": None,
+        },
+        headers={"X-Admin-Key": "test-admin-key"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["nombre"] == "Nombre actualizado"
+    assert response.json()["email"] == "actualizado@example.com"
+    assert response.json()["anios_antiguedad"] == 5
+    assert response.json()["manager_id"] is None
+
+
+def test_solo_admin_puede_actualizar_empleados(client):
+    assert crear_empleado(client, "Admin", "ADMIN_RRHH").status_code == 201
+    assert crear_empleado(client, "Manager", "MANAGER", user_id=1).status_code == 201
+
+    response = client.patch(
+        "/api/v1/empleados/2",
+        json={"nombre": "Nombre no autorizado"},
+        headers={"X-Admin-Key": "clave-incorrecta"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Invalid admin key"
+
+
+def test_no_permite_email_duplicado_al_actualizar(client):
+    assert crear_empleado(client, "Admin", "ADMIN_RRHH").status_code == 201
+    assert crear_empleado(client, "Empleado A", "EMPLEADO", user_id=1).status_code == 201
+    assert crear_empleado(client, "Empleado B", "EMPLEADO", user_id=1).status_code == 201
+
+    response = client.patch(
+        "/api/v1/empleados/3",
+        json={"email": "empleado.a@example.com"},
+        headers={"X-Admin-Key": "test-admin-key"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Email already registered"

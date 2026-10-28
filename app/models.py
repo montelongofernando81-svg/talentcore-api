@@ -42,6 +42,12 @@ class EmpleadoCreate(BaseModel):
     anios_antiguedad: int
     manager_id: Optional[int] = None
 
+class EmpleadoUpdate(BaseModel):
+    nombre: Optional[str] = None
+    email: Optional[str] = None
+    anios_antiguedad: Optional[int] = None
+    manager_id: Optional[int] = None
+
 class EmpleadoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int

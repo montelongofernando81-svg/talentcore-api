@@ -1,11 +1,14 @@
+import os
+import secrets
 from fastapi import FastAPI, Depends, Header, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.models import (
     Base, engine, get_db,
     Empleado, SolicitudVacaciones,
-    EmpleadoCreate, EmpleadoResponse,
+    EmpleadoCreate, EmpleadoUpdate, EmpleadoResponse,
     SaldoResponse, SolicitudCreate,
     RevisionRequest, SolicitudResponse,
 )
@@ -51,6 +54,55 @@ def crear_empleado(
     db.commit()
     db.refresh(emp)
     return emp
+
+
+@app.patch("/api/v1/empleados/{empleado_id}", response_model=EmpleadoResponse)
+def actualizar_empleado(
+    empleado_id: int,
+    payload: EmpleadoUpdate,
+    x_admin_key: str = Header(..., alias="X-Admin-Key"),
+    db: Session = Depends(get_db),
+):
+    admin_api_key = os.getenv("ADMIN_API_KEY")
+    if not admin_api_key:
+        raise HTTPException(status_code=503, detail="Employee updates are not configured")
+    if not secrets.compare_digest(x_admin_key, admin_api_key):
+        raise HTTPException(status_code=403, detail="Invalid admin key")
+
+    empleado = db.query(Empleado).filter(Empleado.id == empleado_id).first()
+    if not empleado:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    cambios = payload.model_dump(exclude_unset=True)
+    if not cambios:
+        raise HTTPException(status_code=400, detail="No fields provided to update")
+    for campo in ("nombre", "email", "anios_antiguedad"):
+        if campo in cambios and cambios[campo] is None:
+            raise HTTPException(status_code=422, detail=f"{campo} cannot be null")
+    if "anios_antiguedad" in cambios and cambios["anios_antiguedad"] < 0:
+        raise HTTPException(status_code=422, detail="anios_antiguedad must be non-negative")
+    if "manager_id" in cambios and cambios["manager_id"] is not None:
+        manager = db.query(Empleado).filter(Empleado.id == cambios["manager_id"]).first()
+        if not manager:
+            raise HTTPException(status_code=404, detail="Manager not found")
+    if "email" in cambios:
+        email_en_uso = (
+            db.query(Empleado)
+            .filter(Empleado.email == cambios["email"], Empleado.id != empleado_id)
+            .first()
+        )
+        if email_en_uso:
+            raise HTTPException(status_code=409, detail="Email already registered")
+
+    for campo, valor in cambios.items():
+        setattr(empleado, campo, valor)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Employee update conflicts with existing data")
+    db.refresh(empleado)
+    return empleado
 
 
 @app.get("/api/v1/vacaciones/saldo/{empleado_id}", response_model=SaldoResponse)
