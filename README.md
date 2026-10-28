@@ -32,6 +32,15 @@ uvicorn app.main:app --reload
 La comprobación de salud está disponible en `http://127.0.0.1:8000/health`.
 La base de datos SQLite `talentcore.db` se crea localmente y no se versiona.
 
+## Publicar en Render
+
+El archivo `render.yaml` configura TalentCore como un servicio web público.
+Conecta este repositorio en Render y crea un **New Blueprint Instance**. Cuando
+termine el despliegue, Swagger estará disponible sin autenticación en
+`https://<url-del-servicio>/docs`; OpenAPI, en `https://<url-del-servicio>/openapi.json`.
+La API REST también quedará expuesta públicamente, por lo que configura la
+autenticación antes de usarla con datos reales.
+
 ## Ejecutar los agentes
 
 Desde la raíz y con `.env` configurado, ejecuta los scripts en este orden:
